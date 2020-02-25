@@ -1,6 +1,8 @@
 package mbus
 
-import "github.com/nats-io/go-nats"
+import (
+	"github.com/nats-io/go-nats"
+)
 
 type NatsConnWithUrlProvider struct {
 	Url string

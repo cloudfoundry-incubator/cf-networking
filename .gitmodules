@@ -175,3 +175,9 @@
 [submodule "src/google.golang.org/grpc"]
 	path = src/google.golang.org/grpc
 	url = https://github.com/grpc/grpc-go
+[submodule "src/code.cloudfoundry.org/tlsconfig"]
+	path = src/code.cloudfoundry.org/tlsconfig
+	url = https://github.com/cloudfoundry/tlsconfig.git
+[submodule "src/code.cloudfoundry.org/cf-routing-test-helpers"]
+	path = src/code.cloudfoundry.org/cf-routing-test-helpers
+	url = https://github.com/cloudfoundry/cf-routing-test-helpers
