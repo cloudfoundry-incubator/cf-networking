@@ -11,13 +11,15 @@ import (
 
 	"service-discovery-controller/mbus/fakes"
 
+	networking_test_helpers "test-helpers"
+
 	"code.cloudfoundry.org/cf-networking-helpers/testsupport/ports"
 	tls_helpers "code.cloudfoundry.org/cf-routing-test-helpers/tls"
+
 	"code.cloudfoundry.org/clock/fakeclock"
 	"code.cloudfoundry.org/lager"
-	"code.cloudfoundry.org/tlsconfig"
 	"github.com/nats-io/gnatsd/server"
-	"github.com/nats-io/go-nats"
+	"github.com/nats-io/nats.go"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pkg/errors"

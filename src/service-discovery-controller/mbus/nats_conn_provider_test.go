@@ -3,15 +3,11 @@ package mbus_test
 import (
 	"code.cloudfoundry.org/cf-networking-helpers/testsupport/ports"
 
-	"crypto/tls"
 	. "service-discovery-controller/mbus"
 	"time"
 
-	tls_helpers "code.cloudfoundry.org/cf-routing-test-helpers/tls"
-	"code.cloudfoundry.org/tlsconfig"
-
 	"github.com/nats-io/gnatsd/server"
-	nats "github.com/nats-io/go-nats"
+	nats "github.com/nats-io/nats.go"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
