@@ -181,3 +181,15 @@
 [submodule "src/code.cloudfoundry.org/cf-routing-test-helpers"]
 	path = src/code.cloudfoundry.org/cf-routing-test-helpers
 	url = https://github.com/cloudfoundry/cf-routing-test-helpers
+[submodule "src/github.com/nats-io/nats.go"]
+	path = src/github.com/nats-io/nats.go
+	url = https://github.com/nats-io/nats.go.git
+[submodule "src/github.com/nats-io/nkeys"]
+	path = src/github.com/nats-io/nkeys
+	url = https://github.com/nats-io/nkeys.git
+[submodule "src/github.com/nats-io/jwt"]
+	path = src/github.com/nats-io/jwt
+	url = https://github.com/nats-io/jwt.git
+[submodule "src/golang.org/x/crypto"]
+	path = src/golang.org/x/crypto
+	url = https://github.com/golang/crypto.git
