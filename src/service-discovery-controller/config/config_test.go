@@ -36,6 +36,12 @@ var _ = Describe("Config", func() {
 						"pass": "b-nats-pass"
 					}
 				],
+				"nats_mtls_config":{
+					"enabled": true,
+					"cert_path": "/my/cert/path",
+					"key_path": "/my/key/path",
+					"ca_path": "/my/ca/path"
+				},
 				"staleness_threshold_seconds": 5,
 				"pruning_interval_seconds": 3,
 				"metrics_emit_seconds": 6,
@@ -58,6 +64,10 @@ var _ = Describe("Config", func() {
 			Expect(parsedConfig.Index).To(Equal("62"))
 			Expect(parsedConfig.NatsServers()).To(ContainElement("nats://a-nats-user:a-nats-pass@a-nats-host:1"))
 			Expect(parsedConfig.NatsServers()).To(ContainElement("nats://b-nats-user:b-nats-pass@b-nats-host:2"))
+			Expect(parsedConfig.NatsMTLSConfig.Enabled).To(BeTrue())
+			Expect(parsedConfig.NatsMTLSConfig.CertPath).To(Equal("/my/cert/path"))
+			Expect(parsedConfig.NatsMTLSConfig.KeyPath).To(Equal("/my/key/path"))
+			Expect(parsedConfig.NatsMTLSConfig.CAPath).To(Equal("/my/ca/path"))
 			Expect(parsedConfig.StalenessThresholdSeconds).To(Equal(5))
 			Expect(parsedConfig.PruningIntervalSeconds).To(Equal(3))
 			Expect(parsedConfig.MetricsEmitSeconds).To(Equal(6))

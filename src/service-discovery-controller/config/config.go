@@ -9,21 +9,22 @@ import (
 )
 
 type Config struct {
-	Address                   string       `json:"address" validate:"nonzero"`
-	Port                      string       `json:"port" validate:"nonzero"`
-	Nats                      []NatsConfig `json:"nats"`
-	Index                     string       `json:"index"`
-	ServerCert                string       `json:"server_cert" validate:"nonzero"`
-	ServerKey                 string       `json:"server_key" validate:"nonzero"`
-	CACert                    string       `json:"ca_cert" validate:"nonzero"`
-	MetronPort                int          `json:"metron_port" validate:"min=1"`
-	LogLevelAddress           string       `json:"log_level_address"`
-	LogLevelPort              int          `json:"log_level_port"`
-	StalenessThresholdSeconds int          `json:"staleness_threshold_seconds" validate:"min=1"`
-	PruningIntervalSeconds    int          `json:"pruning_interval_seconds" validate:"min=1"`
-	MetricsEmitSeconds        int          `json:"metrics_emit_seconds" validate:"min=1"`
-	ResumePruningDelaySeconds int          `json:"resume_pruning_delay_seconds" validate:"min=0"`
-	WarmDurationSeconds       int          `json:"warm_duration_seconds" validate:"min=0"`
+	Address                   string         `json:"address" validate:"nonzero"`
+	Port                      string         `json:"port" validate:"nonzero"`
+	Nats                      []NatsConfig   `json:"nats"`
+	NatsMTLSConfig            NatsMTLSConfig `json:"nats_mtls_config"`
+	Index                     string         `json:"index"`
+	ServerCert                string         `json:"server_cert" validate:"nonzero"`
+	ServerKey                 string         `json:"server_key" validate:"nonzero"`
+	CACert                    string         `json:"ca_cert" validate:"nonzero"`
+	MetronPort                int            `json:"metron_port" validate:"min=1"`
+	LogLevelAddress           string         `json:"log_level_address"`
+	LogLevelPort              int            `json:"log_level_port"`
+	StalenessThresholdSeconds int            `json:"staleness_threshold_seconds" validate:"min=1"`
+	PruningIntervalSeconds    int            `json:"pruning_interval_seconds" validate:"min=1"`
+	MetricsEmitSeconds        int            `json:"metrics_emit_seconds" validate:"min=1"`
+	ResumePruningDelaySeconds int            `json:"resume_pruning_delay_seconds" validate:"min=0"`
+	WarmDurationSeconds       int            `json:"warm_duration_seconds" validate:"min=0"`
 }
 
 type NatsConfig struct {
@@ -31,6 +32,13 @@ type NatsConfig struct {
 	Port uint16 `json:"port"`
 	User string `json:"user"`
 	Pass string `json:"pass"`
+}
+
+type NatsMTLSConfig struct {
+	Enabled  bool   `json:"enabled"`
+	CertPath string `json:"cert_path"`
+	KeyPath  string `json:"key_path"`
+	CAPath   string `json:"ca_path"`
 }
 
 func NewConfig(configJSON []byte) (*Config, error) {

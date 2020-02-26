@@ -2,6 +2,7 @@ package mbus
 
 import (
 	"encoding/json"
+	"service-discovery-controller/config"
 	"time"
 
 	"sync"
@@ -14,6 +15,7 @@ import (
 
 	"code.cloudfoundry.org/clock"
 	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/tlsconfig"
 	"github.com/nats-io/go-nats"
 	"github.com/pkg/errors"
 )
@@ -49,6 +51,7 @@ type AddressTable interface {
 
 type Subscriber struct {
 	natsConnProvider NatsConnProvider
+	natsMTLSConfig   config.NatsMTLSConfig
 	subOpts          SubscriberOpts
 	warmingDuration  time.Duration
 	table            AddressTable
@@ -82,6 +85,7 @@ type routeMessageRecorder interface {
 
 func NewSubscriber(
 	natsConnProvider NatsConnProvider,
+	natsMTLSConfig config.NatsMTLSConfig,
 	subOpts SubscriberOpts,
 	warmingDuration time.Duration,
 	table AddressTable,
@@ -92,6 +96,7 @@ func NewSubscriber(
 ) *Subscriber {
 	return &Subscriber{
 		natsConnProvider: natsConnProvider,
+		natsMTLSConfig:   natsMTLSConfig,
 		subOpts:          subOpts,
 		warmingDuration:  warmingDuration,
 		table:            table,
@@ -123,7 +128,7 @@ func (s *Subscriber) RunOnce() error {
 	var err error
 	s.once.Do(func() {
 		var natsClient NatsConn
-		natsClient, err = s.natsConnProvider.Connection(
+		options := []nats.Option{
 			nats.ReconnectHandler(nats.ConnHandler(func(conn *nats.Conn) {
 				{
 					connectedUrl, err := url.Parse(conn.ConnectedUrl())
@@ -154,6 +159,27 @@ func (s *Subscriber) RunOnce() error {
 				)
 			})),
 			nats.MaxReconnects(-1),
+		}
+
+		if s.natsMTLSConfig.Enabled {
+			clientTLSConfig, err := tlsconfig.Build(
+				tlsconfig.WithInternalServiceDefaults(),
+				tlsconfig.WithIdentityFromFile(s.natsMTLSConfig.CertPath, s.natsMTLSConfig.KeyPath),
+			).Client(
+				tlsconfig.WithAuthorityFromFile(s.natsMTLSConfig.CAPath),
+			)
+			tlsOption := nats.Secure(clientTLSConfig)
+			if err == nil {
+				s.logger.Info(
+					"Subscriber failed to create TLS config",
+					lager.Data{"tls config builder error": err},
+				)
+			}
+			options = append(options, tlsOption)
+		}
+
+		natsClient, err = s.natsConnProvider.Connection(
+			options...,
 		)
 
 		if err != nil {
@@ -305,8 +331,8 @@ func (s *Subscriber) setupAddressMessageHandler() error {
 
 func (s *Subscriber) subscriptionOptionsJSON() []byte {
 	discoveryMessageJson, err := json.Marshal(ServiceDiscoveryStartMessage{
-		Id:   s.subOpts.ID,
-		Host: s.localIP,
+		Id:                               s.subOpts.ID,
+		Host:                             s.localIP,
 		MinimumRegisterIntervalInSeconds: s.subOpts.MinimumRegisterIntervalInSeconds,
 		PruneThresholdInSeconds:          s.subOpts.PruneThresholdInSeconds,
 	})
