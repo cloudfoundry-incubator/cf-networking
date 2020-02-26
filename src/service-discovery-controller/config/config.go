@@ -12,7 +12,7 @@ type Config struct {
 	Address                   string         `json:"address" validate:"nonzero"`
 	Port                      string         `json:"port" validate:"nonzero"`
 	Nats                      []NatsConfig   `json:"nats"`
-	NatsMTLSConfig            NatsMTLSConfig `json:"nats_mtls_config"`
+	NatsMTLS                  NatsMTLSConfig `json:"nats_mtls"`
 	Index                     string         `json:"index"`
 	ServerCert                string         `json:"server_cert" validate:"nonzero"`
 	ServerKey                 string         `json:"server_key" validate:"nonzero"`
