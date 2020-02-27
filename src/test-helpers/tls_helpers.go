@@ -13,8 +13,11 @@ import (
 	"os"
 	"time"
 
-	. "github.com/onsi/gomega"
+	"code.cloudfoundry.org/tlsconfig"
+
 	"net"
+
+	. "github.com/onsi/gomega"
 )
 
 func GenerateCaAndMutualTlsCerts() (caFileName string, certFileName string, privateKeyFileName string, cert tls.Certificate) {
@@ -182,4 +185,25 @@ func writeClientCredFile(data []byte) string {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(ioutil.WriteFile(tempFile.Name(), data, os.ModePerm)).To(Succeed())
 	return tempFile.Name()
+}
+
+func BuildTLSConfig(certPath, keyPath, caPath string, isServer bool) (*tls.Config, error) {
+	var tlsConfig *tls.Config
+	var err error
+	if isServer {
+		tlsConfig, err = tlsconfig.Build(
+			tlsconfig.WithInternalServiceDefaults(),
+			tlsconfig.WithIdentityFromFile(certPath, keyPath),
+		).Server(
+			tlsconfig.WithClientAuthenticationFromFile(caPath),
+		)
+	} else {
+		tlsConfig, err = tlsconfig.Build(
+			tlsconfig.WithInternalServiceDefaults(),
+			tlsconfig.WithIdentityFromFile(certPath, keyPath),
+		).Client(
+			tlsconfig.WithAuthorityFromFile(caPath),
+		)
+	}
+	return tlsConfig, err
 }
