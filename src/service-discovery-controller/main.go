@@ -179,7 +179,7 @@ func buildSubscriber(conf *config.Config, addressTable *addresstable.AddressTabl
 	subscriberID := fmt.Sprintf("%s-%s", conf.Index, uuid)
 
 	subOpts := mbus.SubscriberOpts{
-		ID: subscriberID,
+		ID:                               subscriberID,
 		MinimumRegisterIntervalInSeconds: conf.ResumePruningDelaySeconds,
 		PruneThresholdInSeconds:          120,
 	}
@@ -196,7 +196,7 @@ func buildSubscriber(conf *config.Config, addressTable *addresstable.AddressTabl
 	newClock := clock.NewClock()
 	warmDuration := time.Duration(conf.WarmDurationSeconds) * time.Second
 
-	subscriber := mbus.NewSubscriber(provider, subOpts, warmDuration, addressTable,
+	subscriber := mbus.NewSubscriber(provider, conf.NatsMTLS, subOpts, warmDuration, addressTable,
 		localIP, routeMessageRecorder, logger.Session("mbus"), newClock)
 	return subscriber, nil
 }

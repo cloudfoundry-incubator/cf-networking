@@ -13,13 +13,13 @@ import (
 	"time"
 
 	"crypto/tls"
-	"test-helpers"
+	testhelpers "test-helpers"
 
 	"strings"
 
 	"code.cloudfoundry.org/cf-networking-helpers/testsupport/ports"
 	"github.com/nats-io/gnatsd/server"
-	"github.com/nats-io/go-nats"
+	"github.com/nats-io/nats.go"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
@@ -44,17 +44,27 @@ var _ = Describe("Service Discovery Controller process", func() {
 		logLevelEndpointPort      int
 		logLevelEndpointAddress   string
 		fakeMetron                metrics.FakeMetron
+		mtlsNATSCertPath          string
+		natsCAPath                string
+		mtlsNATSKeyPath           string
+		serverTLSConfig           *tls.Config
+		clientTLSConfig           *tls.Config
+		err                       error
 	)
 
 	BeforeEach(func() {
 		caFile, serverCert, serverKey, clientCert = testhelpers.GenerateCaAndMutualTlsCerts()
+		natsCAPath, mtlsNATSCertPath, mtlsNATSKeyPath, _ = testhelpers.GenerateCaAndMutualTlsCerts()
+		serverTLSConfig, err = testhelpers.BuildTLSConfig(mtlsNATSCertPath, mtlsNATSKeyPath, natsCAPath, true)
+		clientTLSConfig, err = testhelpers.BuildTLSConfig(mtlsNATSCertPath, mtlsNATSKeyPath, natsCAPath, false)
+		Expect(err).ToNot(HaveOccurred())
 		stalenessThresholdSeconds = 1
 		pruningIntervalSeconds = 1
 		logLevelEndpointPort = ports.PickAPort()
 		logLevelEndpointAddress = "localhost"
 		fakeMetron = metrics.NewFakeMetron()
 		natsServerPort = ports.PickAPort()
-		natsServer = RunNatsServerOnPort(natsServerPort)
+		natsServer = RunNatsServerWithTLSOnPort(natsServerPort, serverTLSConfig)
 		port = ports.PickAPort()
 		configPath = writeConfigFile(fmt.Sprintf(`{
 			"address":"127.0.0.1",
@@ -70,6 +80,12 @@ var _ = Describe("Service Discovery Controller process", func() {
 					"pass":""
 				}
 			],
+			"nats_mtls_config": {
+				"enabled": true,
+				"cert_path": "%s",
+				"key_path": "%s",
+				"ca_path": "%s"
+			},
 			"staleness_threshold_seconds": %d,
 			"pruning_interval_seconds": %d,
 			"log_level_address": "%s",
@@ -79,7 +95,7 @@ var _ = Describe("Service Discovery Controller process", func() {
 			"resume_pruning_delay_seconds": 1,
 			"warm_duration_seconds": 0
 		}`,
-			port, caFile, serverCert, serverKey, natsServerPort, stalenessThresholdSeconds, pruningIntervalSeconds, logLevelEndpointAddress, logLevelEndpointPort, fakeMetron.Port()))
+			port, caFile, serverCert, serverKey, natsServerPort, mtlsNATSCertPath, mtlsNATSKeyPath, natsCAPath, stalenessThresholdSeconds, pruningIntervalSeconds, logLevelEndpointAddress, logLevelEndpointPort, fakeMetron.Port()))
 	})
 
 	AfterEach(func() {
@@ -97,7 +113,7 @@ var _ = Describe("Service Discovery Controller process", func() {
 
 			Eventually(session, 6*time.Second).Should(gbytes.Say("service-discovery-controller.server-started"))
 
-			routeEmitter = newFakeRouteEmitter("nats://" + natsServer.Addr().String())
+			routeEmitter = newFakeRouteEmitterWithTLS("nats://"+natsServer.Addr().String(), clientTLSConfig)
 			register(routeEmitter, "192.168.0.1", "app-id.internal.local.")
 			register(routeEmitter, "192.168.0.2", "app-id.internal.local.")
 			register(routeEmitter, "192.168.0.1", "large-id.internal.local.")
@@ -130,7 +146,7 @@ var _ = Describe("Service Discovery Controller process", func() {
 			Eventually(session).Should(gbytes.Say("service-discovery-controller.server-stopped"))
 		})
 
-		It("should not return ips for unregistered domains", func() {
+		FIt("should not return ips for unregistered domains", func() {
 			requestLogChange("debug", logLevelEndpointPort)
 
 			unregister(routeEmitter, "192.168.0.1", "app-id.internal.local.")
@@ -601,7 +617,7 @@ var _ = Describe("Service Discovery Controller process", func() {
 				})
 
 				By("resuming pruning when nats server is back up", func() {
-					natsServer = RunNatsServerOnPort(natsServerPort)
+					natsServer = RunNatsServerWithTLSOnPort(natsServerPort, serverTLSConfig)
 					Eventually(func() []byte {
 						url := fmt.Sprintf("https://127.0.0.1:%d/v1/registration/app-id.internal.local.", port)
 						resp, err := client.Get(url)
@@ -812,8 +828,8 @@ func unregister(routeEmitter *nats.Conn, ip string, url string) {
 	Expect(routeEmitter.PublishMsg(&natsRegistryMsg)).ToNot(HaveOccurred())
 }
 
-func newFakeRouteEmitter(natsUrl string) *nats.Conn {
-	natsClient, err := nats.Connect(natsUrl, nats.ReconnectWait(1*time.Nanosecond))
+func newFakeRouteEmitterWithTLS(natsUrl string, config *tls.Config) *nats.Conn {
+	natsClient, err := nats.Connect(natsUrl, nats.ReconnectWait(1*time.Nanosecond), nats.Secure(config))
 	Expect(err).NotTo(HaveOccurred())
 	return natsClient
 }

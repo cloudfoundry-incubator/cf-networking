@@ -1,6 +1,8 @@
 package main_test
 
 import (
+	"crypto/tls"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -33,8 +35,11 @@ var _ = SynchronizedAfterSuite(func() {
 	gexec.CleanupBuildArtifacts()
 })
 
-func RunNatsServerOnPort(port int) *server.Server {
+func RunNatsServerWithTLSOnPort(port int, config *tls.Config) *server.Server {
 	opts := gnatsd.DefaultTestOptions
 	opts.Port = port
+	opts.TLSConfig = config
+	opts.Username = ""
+	opts.Password = ""
 	return gnatsd.RunServer(&opts)
 }
