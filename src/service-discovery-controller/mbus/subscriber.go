@@ -168,14 +168,15 @@ func (s *Subscriber) RunOnce() error {
 			).Client(
 				tlsconfig.WithAuthorityFromFile(s.natsMTLSConfig.CAPath),
 			)
-			tlsOption := nats.Secure(clientTLSConfig)
-			if err == nil {
+			if err != nil {
 				s.logger.Info(
 					"Subscriber failed to create TLS config",
 					lager.Data{"tls config builder error": err},
 				)
+			} else {
+				tlsOption := nats.Secure(clientTLSConfig)
+				options = append(options, tlsOption)
 			}
-			options = append(options, tlsOption)
 		}
 
 		natsClient, err = s.natsConnProvider.Connection(

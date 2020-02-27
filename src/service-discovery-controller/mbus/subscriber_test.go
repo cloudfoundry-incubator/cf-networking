@@ -502,43 +502,64 @@ var _ = Describe("Subscriber", func() {
 
 	Context("when a nats mTLS config is provided", func() {
 		var (
-			natsCAPath             string
-			mtlsNATSServerCertPath string
-			mtlsNATSServerKeyPath  string
-			mtlsNATSClientCert     tls.Certificate
-			serverTLSConfig        *tls.Config
-			clientTLSConfig        *tls.Config
-			tlsPort                int
-			err                    error
+			natsCAPath       string
+			mtlsNATSCertPath string
+			mtlsNATSKeyPath  string
+			serverTLSConfig  *tls.Config
+			clientTLSConfig  *tls.Config
+			tlsPort          int
+			err              error
 		)
 		BeforeEach(func() {
-			natsCAPath, mtlsNATSServerCertPath, mtlsNATSServerKeyPath, mtlsNATSClientCert = tls_helpers.GenerateCaAndMutualTlsCerts()
-			serverTLSConfig, err = tlsconfig.Build(
-				tlsconfig.WithInternalServiceDefaults(),
-				tlsconfig.WithIdentityFromFile(mtlsNATSServerCertPath, mtlsNATSServerKeyPath),
-			).Server(
-				tlsconfig.WithClientAuthenticationFromFile(natsCAPath),
-			)
-			Expect(err).NotTo(HaveOccurred())
+			natsCAPath, mtlsNATSCertPath, mtlsNATSKeyPath, _ = tls_helpers.GenerateCaAndMutualTlsCerts()
+			serverTLSConfig, err = networking_test_helpers.BuildTLSConfig(mtlsNATSCertPath, mtlsNATSKeyPath, natsCAPath, true)
+			Expect(err).ToNot(HaveOccurred())
 
-			port = ports.PickAPort()
-			gnatsServer = RunServerWithTLSOnPort(port, serverTLSConfig)
+			clientTLSConfig, err = networking_test_helpers.BuildTLSConfig(mtlsNATSCertPath, mtlsNATSKeyPath, natsCAPath, false)
+			Expect(err).ToNot(HaveOccurred())
+
+			tlsPort = ports.PickAPort()
+			gnatsServer = RunServerWithTLSOnPort(tlsPort, serverTLSConfig)
 			gnatsServer.Start()
 
 			natsUrl = "nats://username:password@" + gnatsServer.Addr().String()
-			fakeRouteEmitter = newFakeRouteEmitter(natsUrl)
+			fakeRouteEmitter = newFakeRouteEmitterWithTLS(natsUrl, clientTLSConfig)
+
+			_, err = fakeRouteEmitter.ChanSubscribe("service-discovery.greet.test.response", greetMsgChan)
+			Expect(err).ToNot(HaveOccurred())
 
 			provider = &NatsConnWithUrlProvider{Url: natsUrl}
 			natsMTLSConfig := config.NatsMTLSConfig{
-				Enabled: true,
-				CertPath: mtlsNATSClientCert,
-				KeyPath: mtlsN
+				Enabled:  true,
+				CertPath: mtlsNATSCertPath,
+				KeyPath:  mtlsNATSKeyPath,
+				CAPath:   natsCAPath,
 			}
 
-			subscriber = NewSubscriber(provider, , subOpts, warmingDuration, addressTable, localIP, messageRecorder, subcriberLogger, fakeClock)
+			subscriber = NewSubscriber(provider, natsMTLSConfig, subOpts, warmingDuration, addressTable, localIP, messageRecorder, subcriberLogger, fakeClock)
 			Expect(subscriber.RunOnce()).ToNot(HaveOccurred())
 		})
+
 		It("makes a nats connection with mTLS", func() {
+			Expect(fakeRouteEmitter.PublishRequest("service-discovery.greet", "service-discovery.greet.test.response", []byte{})).To(Succeed())
+
+			var msg *nats.Msg
+			var serviceDiscoveryData ServiceDiscoveryStartMessage
+			Eventually(greetMsgChan, 10*time.Second).Should(Receive(&msg))
+			Expect(msg).ToNot(BeNil())
+
+			err := json.Unmarshal(msg.Data, &serviceDiscoveryData)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(serviceDiscoveryData.Id).To(Equal(subOpts.ID))
+			Expect(serviceDiscoveryData.MinimumRegisterIntervalInSeconds).To(Equal(subOpts.MinimumRegisterIntervalInSeconds))
+			Expect(serviceDiscoveryData.PruneThresholdInSeconds).To(Equal(subOpts.PruneThresholdInSeconds))
+			Expect(serviceDiscoveryData.Host).ToNot(BeEmpty())
+
+			Eventually(subcriberLogger).Should(HaveLogged(
+				Info(
+					Message("test.service-discovery.greet-response-published"),
+				)))
 		})
 	})
 
@@ -744,6 +765,12 @@ var _ = Describe("Subscriber", func() {
 
 func newFakeRouteEmitter(natsUrl string) *nats.Conn {
 	natsClient, err := nats.Connect(natsUrl, nats.ReconnectWait(1*time.Nanosecond))
+	Expect(err).NotTo(HaveOccurred())
+	return natsClient
+}
+
+func newFakeRouteEmitterWithTLS(natsUrl string, tlsConfig *tls.Config) *nats.Conn {
+	natsClient, err := nats.Connect(natsUrl, nats.ReconnectWait(1*time.Nanosecond), nats.Secure(tlsConfig))
 	Expect(err).NotTo(HaveOccurred())
 	return natsClient
 }
