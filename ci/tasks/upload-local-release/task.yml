@@ -20,4 +20,4 @@ run:
   path: cf-networking-release-ci/ci/tasks/upload-local-release/task
 
 params:
-  BBL_STATE_DIR:
+  BBL_STATE_DIR: bbl-state
