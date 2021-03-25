@@ -321,44 +321,41 @@ jobs:
         file: cf-networking-release-ci/ci/tasks/upload-acceptance-test-release/task.yml
         input_mapping:
           toolsmiths-env: pickelhelm
-      ensure:
-        put: pickelhelm
-        resource: toolsmiths-pool
-        inputs: []
-        params:
-          action: unclaim
+      # ensure:
+      #   put: pickelhelm
+      #   resource: toolsmiths-pool
+      #   inputs: []
+      #   params:
+      #     action: unclaim
+      #     env_file: pickelhelm/metadata
 
-    # - task: deploy-cf
-    #   file: cf-deployment-concourse-tasks/bosh-deploy-with-created-release/task.yml
-    #   params:
-    #     BBL_STATE_DIR: environments/pickelhelm/bbl-state
-    #     SYSTEM_DOMAIN: pickelhelm.c2c.cf-app.com
-    #     OPS_FILES: |
-    #       cf-deployment/operations/scale-to-one-az.yml
-    #       cf-networking-release-ci/ci/opsfiles/smaller-footprint.yml
-    #       cf-networking-release/manifest-generation/opsfiles/cf-networking.yml
-    #       cf-networking-release/manifest-generation/opsfiles/use-system-domain-as-metron-deployment-name.yml
-    #       cf-networking-release-ci/ci/opsfiles/use-latest-silk.yml
-    #       cf-networking-release-ci/ci/opsfiles/use-latest-cf-networking.yml
-    #       deployments-repo/opsfiles/pickelhelm-use-external-postgres-for-c2c.yml
-    #       cf-deployment/operations/enable-service-discovery.yml
-    #       cf-networking-release/manifest-generation/opsfiles/add-apps-internal-search-domain.yml
-    #       cf-networking-release-ci/ci/opsfiles/add-acceptance-test-jobs.yml
-    #       cf-networking-release/manifest-generation/opsfiles/enable-experimental-dynamic-egress-policies.yml
-    #       cf-networking-release-ci/ci/opsfiles/disable-ingress-redirect-to-proxy.yml
-    #       cf-deployment/operations/experimental/enable-iptables-logger.yml
-    #       cf-networking-release-ci/ci/opsfiles/scale-to-2-diego-cells.yml
-    #       cf-networking-release-ci/ci/opsfiles/lower-canary-watch-time.yml
-    #   input_mapping:
-    #     bbl-state: networking-oss-deployments
-    #     release: cf-networking-dev
-    #     vars-files: networking-oss-deployments
-    # - task: bosh-cleanup
-    #   file: cf-deployment-concourse-tasks/bosh-cleanup/task.yml
-    #   params:
-    #     BBL_STATE_DIR: environments/pickelhelm/bbl-state
-    #   input_mapping:
-    #     bbl-state: networking-oss-deployments
+    - task: deploy-cf
+      file: cf-deployment-concourse-tasks/bosh-deploy-with-created-release/task.yml
+      params:
+        OPS_FILES: |
+          cf-deployment/operations/scale-to-one-az.yml
+          cf-networking-release-ci/ci/opsfiles/smaller-footprint.yml
+          cf-networking-release/manifest-generation/opsfiles/cf-networking.yml
+          cf-networking-release/manifest-generation/opsfiles/use-system-domain-as-metron-deployment-name.yml
+          cf-networking-release-ci/ci/opsfiles/use-latest-silk.yml
+          cf-networking-release-ci/ci/opsfiles/use-latest-cf-networking.yml
+          deployments-repo/opsfiles/pickelhelm-use-external-postgres-for-c2c.yml
+          cf-deployment/operations/enable-service-discovery.yml
+          cf-networking-release/manifest-generation/opsfiles/add-apps-internal-search-domain.yml
+          cf-networking-release-ci/ci/opsfiles/add-acceptance-test-jobs.yml
+          cf-networking-release/manifest-generation/opsfiles/enable-experimental-dynamic-egress-policies.yml
+          cf-networking-release-ci/ci/opsfiles/disable-ingress-redirect-to-proxy.yml
+          cf-deployment/operations/experimental/enable-iptables-logger.yml
+          cf-networking-release-ci/ci/opsfiles/scale-to-2-diego-cells.yml
+          cf-networking-release-ci/ci/opsfiles/lower-canary-watch-time.yml
+      input_mapping:
+        toolsmiths-env: pickelhelm
+        release: cf-networking-dev
+        vars-files: networking-oss-deployments
+    - task: bosh-cleanup
+      file: cf-deployment-concourse-tasks/bosh-cleanup/task.yml
+      input_mapping:
+        toolsmiths-env: pickelhelm
 
   - name: pickelhelm-test
     serial_groups: [pickelhelm]
