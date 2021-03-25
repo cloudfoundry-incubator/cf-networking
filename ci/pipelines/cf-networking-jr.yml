@@ -288,19 +288,20 @@ jobs:
       - get: silk-dev
         trigger: true
         # passed: [unit-and-integration-tests]
-    - put: pickelhelm
-      resource: toolsmiths-pool
-      inputs: []
-      params:
-        action: claim
-    - task: collect-ops-files
-      file: cf-networking-release-ci/ci/tasks/collect-named-ops-files/task.yml
-      params:
-        ENVIRONMENT_NAME: pickelhelm
-      input_mapping:
-        cf-networking-release: cf-networking-dev
-        deployments-repo: networking-oss-deployments
-        silk-release: silk-dev
+    - in_parallel:
+      - put: pickelhelm
+        resource: toolsmiths-pool
+        inputs: []
+        params:
+          action: claim
+      - task: collect-ops-files
+        file: cf-networking-release-ci/ci/tasks/collect-named-ops-files/task.yml
+        params:
+          ENVIRONMENT_NAME: pickelhelm
+        input_mapping:
+          cf-networking-release: cf-networking-dev
+          deployments-repo: networking-oss-deployments
+          silk-release: silk-dev
     - in_parallel:
       - task: upload-stemcell
         file: cf-deployment-concourse-tasks/bosh-upload-stemcell-from-cf-deployment/task.yml
@@ -320,6 +321,13 @@ jobs:
         file: cf-networking-release-ci/ci/tasks/upload-acceptance-test-release/task.yml
         input_mapping:
           toolsmiths-env: pickelhelm
+      ensure:
+        put: pickelhelm
+        resource: toolsmiths-pool
+        inputs: []
+        params:
+          action: unclaim
+
     # - task: deploy-cf
     #   file: cf-deployment-concourse-tasks/bosh-deploy-with-created-release/task.yml
     #   params:
