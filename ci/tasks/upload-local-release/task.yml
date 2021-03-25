@@ -11,6 +11,9 @@ inputs:
   - name: cf-deployment-concourse-tasks
   - name: cf-networking-release-ci
   - name: bbl-state
+    optional: true
+  - name: toolsmiths-env
+    optional: true
   - name: local-release
 
 run:

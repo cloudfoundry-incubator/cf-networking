@@ -12,6 +12,10 @@ inputs:
   - name: cf-networking-dev
   - name: cf-networking-release-ci
   - name: bbl-state
+    optional: true
+  - name: toolsmiths-env
+    optional: true
+  - name: local-release
 
 run:
   path: cf-networking-release-ci/ci/tasks/upload-acceptance-test-release/task
