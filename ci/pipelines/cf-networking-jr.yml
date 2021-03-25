@@ -40,7 +40,7 @@ resources:
     icon: github-box
     source:
       uri: https://github.com/cloudfoundry/cf-networking-release
-      branch: develop
+      branch: use-toolsmiths-envs
       paths:
         - ci
   - name: networking-oss-deployments
@@ -126,7 +126,7 @@ resources:
     icon: github-box
     source:
       uri: git@github.com:cloudfoundry/cf-networking-release.git
-      branch: develop
+      branch: use-toolsmiths-envs
       ignore_paths:
         - docs
         - ci
