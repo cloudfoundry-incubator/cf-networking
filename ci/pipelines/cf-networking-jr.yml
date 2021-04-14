@@ -374,30 +374,71 @@ jobs:
         passed: [pickelhelm-deploy]
         trigger: true
       - get: networking-oss-deployments
-    - task: get-credhub-vars
-      file: cf-networking-release-ci/ci/tasks/get-credhub-vars/task.yml
+      - get: cf-deployment-concourse-tasks
+      - get: pickelhelm
+        resource: toolsmiths-pool
+        passed: [pickelhelm-deploy]
+    - task: generate-test-config
       input_mapping:
-        bbl-state: networking-oss-deployments
-      params:
-        BBL_STATE_DIR: environments/pickelhelm/bbl-state
-        VARIABLES: |
-          /bosh-pickelhelm/cf/cf_admin_password
-          /bosh-pickelhelm/cf/uaa_admin_client_secret
+        toolsmiths-env: pickelhelm
+      config:
+        platform: linux
+        image_resource:
+          type: registry-image
+          source:
+            repository: relintdockerhubpushbot/cf-deployment-concourse-tasks
+        inputs:
+          - name: toolsmiths-env
+          - name: cf-deployment-concourse-tasks
+        outputs:
+          - name: test-config
+        run:
+          path: /bin/bash
+          args:
+            - -c
+            - |
+              source cf-deployment-concourse-tasks/shared-functions
+              setup_bosh_env_vars
+              # set +x
+
+              mkdir -p test-config
+              echo '{}' | jq \
+              --arg cf_api "api.${SYSTEM_DOMAIN}" \
+              --arg apps_domain "${SYSTEM_DOMAIN}" \
+              --arg admin_password $(credhub f -j -n cf_admin_password | jq -r .credentials[].name | xargs credhub get -j -n | jq -r .value) \
+              --arg admin_secret $(credhub f -j -n uaa_admin_client_secret | jq -r .credentials[].name | xargs credhub get -j -n | jq -r .value) \
+              --args \
+              '{
+                  "admin_password":$admin_password,
+                  "admin_secret":$admin_secret,
+                  "admin_user":"admin",
+                  "api":$cf_api,
+                  "apps_domain":$apps_domain,
+                  "default_security_groups": [ "dns", "public_networks" ],
+                  "extra_listen_ports": 2,
+                  "nodes": 1,
+                  "prefix":"test-",
+                  "proxy_applications": 1,
+                  "proxy_instances": 1,
+                  "run_custom_iptables_compatibility_test": true,
+                  "skip_ssl_validation":true,
+                  "test_app_instances": 3,
+                  "test_applications": 2,
+                  "use_http":true
+              }' > test-config/test-config.json
+              cat test-config/test-config.json
+      tags: []
     - task: acceptance-tests-sd
-      file: cf-networking-release-ci/ci/tasks/acceptance-tests/task.yml
+      file: cf-networking-release-ci/ci/tasks/acceptance-tests-toolsmiths/task.yml
       input_mapping:
         cf-networking: cf-networking-dev
-        test-config: networking-oss-deployments
       params:
-        ENVIRONMENT_NAME: pickelhelm
         TEST_NAME: acceptance-sd
     - task: acceptance-tests
-      file: cf-networking-release-ci/ci/tasks/acceptance-tests/task.yml
+      file: cf-networking-release-ci/ci/tasks/acceptance-tests-toolsmiths/task.yml
       input_mapping:
         cf-networking: cf-networking-dev
-        test-config: networking-oss-deployments
       params:
-        ENVIRONMENT_NAME: pickelhelm
         TEST_NAME: acceptance
 
   # - name: mitre-bbl-up
