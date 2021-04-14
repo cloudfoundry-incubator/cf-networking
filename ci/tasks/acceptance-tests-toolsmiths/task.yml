@@ -18,4 +18,4 @@ params:
     TEST_NAME: acceptance
 
 run:
-  path: cf-networking-release-ci/ci/tasks/acceptance-tests/task
+  path: cf-networking-release-ci/ci/tasks/acceptance-tests-toolsmiths/task
