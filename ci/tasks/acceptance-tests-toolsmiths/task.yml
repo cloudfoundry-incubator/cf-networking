@@ -14,7 +14,7 @@ outputs:
   - name: network-stats
 
 params:
-    CONFIG: test-config/test-config.json
+    CONFIG: ~
     TEST_NAME: acceptance
 
 run:
