@@ -555,24 +555,28 @@ jobs:
         file: cf-networking-release-ci/ci/tasks/upload-acceptance-test-release/task.yml
         input_mapping:
           toolsmiths-env: mitre
-    # - task: set-apps-domain
-    #   config:
-    #     platform: linux
-    #     image_resource:
-    #       type: registry-image
-    #       source:
-    #         repository: c2cnetworking/deploy-light
-    #     inputs:
-    #       - name: networking-oss-deployments
-    #     run:
-    #       path: bash
-    #       args:
-    #         - -exc
-    #         - |
-    #           pushd networking-oss-deployments/environments/mitre/bbl-state
-    #             eval "$(bbl print-env)"
-    #           popd
-    #           credhub set -n "/bosh-mitre/cf/apps_domain" -t value -v "apps.mitre.c2c.cf-app.com"
+    - task: set-apps-domain-in-credhub
+      input_mapping:
+        toolsmiths-env: mitre
+      config:
+        platform: linux
+        image_resource:
+          type: registry-image
+          source:
+            repository: relintdockerhubpushbot/cf-deployment-concourse-tasks
+        inputs:
+          - name: toolsmiths-env
+          - name: cf-deployment-concourse-tasks
+        run:
+          path: bash
+          args:
+            - -cx
+            - |
+              source cf-deployment-concourse-tasks/shared-functions
+              setup_bosh_env_vars
+
+              credhub set -n "/bosh-$(cat toolsmiths-env/name)/cf/apps_domain" -t value -v "${SYSTEM_DOMAIN}"
+
     - task: deploy-cf
       file: cf-deployment-concourse-tasks/bosh-deploy-with-created-release/task.yml
       params:
@@ -635,6 +639,7 @@ jobs:
     plan:
     - in_parallel:
       - get: networking-oss-deployments
+      - get: cf-deployment-concourse-tasks
       - get: cf-networking-dev
         passed: [mitre-deploy]
         trigger: true
@@ -654,9 +659,12 @@ jobs:
         trigger: true
       - get: silk-tarball
         passed: [mitre-deploy]
+      - get: mitre
+        resource: toolsmiths-pool
+        passed: [mitre-deploy]
     - task: generate-test-config
       input_mapping:
-        toolsmiths-env: pickelhelm
+        toolsmiths-env: mitre
       config:
         platform: linux
         image_resource:
@@ -756,20 +764,17 @@ jobs:
       input_mapping:
         cf-networking: cf-networking-dev
     - task: acceptance-tests
-      file: cf-networking-release-ci/ci/tasks/acceptance-tests/task.yml
+      file: cf-networking-release-ci/ci/tasks/acceptance-tests-toolsmiths/task.yml
       input_mapping:
         cf-networking: cf-networking-dev
-        test-config: networking-oss-deployments
       params:
-        ENVIRONMENT_NAME: mitre
+        TEST_NAME: acceptance
     - task: acceptance-tests-sd
       privileged: true
-      file: cf-networking-release-ci/ci/tasks/acceptance-tests/task.yml
+      file: cf-networking-release-ci/ci/tasks/acceptance-tests-toolsmiths/task.yml
       input_mapping:
         cf-networking: cf-networking-dev
-        test-config: networking-oss-deployments
       params:
-        ENVIRONMENT_NAME: mitre
         TEST_NAME: acceptance-sd
 
   # - name: mitre-perf-tests
