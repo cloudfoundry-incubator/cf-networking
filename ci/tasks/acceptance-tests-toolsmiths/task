@@ -10,7 +10,7 @@ export GOPATH="${ROOT}/cf-networking"
 export APPS_DIR="${ROOT}/cf-networking/src/example-apps"
 export PATH="${GOPATH}/bin:${PATH}"
 
-export GO111MODULES=auto
+export GO111MODULE=auto
 go get -u github.com/onsi/ginkgo/ginkgo
 
 ginkgo -keepGoing -randomizeAllSpecs -randomizeSuites -race "${ROOT}/cf-networking/src/test/${TEST_NAME}"
