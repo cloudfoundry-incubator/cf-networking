@@ -1,12 +1,21 @@
 set -e -x
 
-pushd ${BOSH_INSTALL_TARGET} > /dev/null
-  source /var/vcap/packages/golang-1-linux/bosh/compile.env
-popd > /dev/null
+env > /tmp/here-are-my-vars
+export GO111MODULE=auto
 
 mkdir -p ${BOSH_INSTALL_TARGET}/src
 cp -a . ${BOSH_INSTALL_TARGET}/src
 
+pushd ${BOSH_INSTALL_TARGET} > /dev/null
+  source /var/vcap/packages/golang-1-linux/bosh/compile.env
+popd > /dev/null
+
+env > /tmp/here-are-my-vars-after-compileenv
+
+echo "In here"
+set +e
+#go build -o "${BOSH_INSTALL_TARGET}/bin/service-discovery-controller" service-discovery-controller >> /tmp/go-build.log
 go install service-discovery-controller/...
+echo "Out here"
 
 rm -rf ${BOSH_INSTALL_TARGET}/src ${BOSH_INSTALL_TARGET}/pkg
