@@ -840,12 +840,7 @@ jobs:
       file: cf-networking-release-ci/ci/tasks/test-nats-performance/task.yml
       input_mapping:
         cf-networking: cf-networking-dev
-        test-config: networking-oss-deployments
-        deployments-repo: networking-oss-deployments
-      params:
-        ENVIRONMENT_NAME: mitre
-        BBL_STATE_DIR: environments/mitre/bbl-state
-        TEST_CONFIG_DIR: environments/mitre/test-configs
+        toolsmiths-env: mitre
 
   # - name: mitre-cats
   #   serial_groups: [mitre-test-group, mitre-deploy-group]
