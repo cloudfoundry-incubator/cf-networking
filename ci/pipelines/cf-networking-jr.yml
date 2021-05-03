@@ -777,42 +777,75 @@ jobs:
       params:
         TEST_NAME: acceptance-sd
 
-  # - name: mitre-perf-tests
-  #   serial_groups: [mitre-test-group, mitre-deploy-group]
-  #   plan:
-  #   - in_parallel:
-  #     - get: networking-oss-deployments
-  #     - get: cf-networking-dev
-  #       passed: [mitre-deploy]
-  #       trigger: true
-  #     - get: cf-networking-tarball
-  #       passed: [mitre-deploy]
-  #       trigger: true
-  #     - get: version
-  #       passed: [mitre-deploy]
-  #     - get: cf-networking-release-ci
-  #       params:
-  #         submodules: none
-  #     - get: cf-deployment
-  #       passed: [mitre-deploy]
-  #       trigger: true
-  #     - get: silk-dev
-  #       passed: [mitre-deploy]
-  #       trigger: true
-  #     - get: silk-tarball
-  #       passed: [mitre-deploy]
-  #   - task: mitre-perf-tests
-  #     privileged: true
-  #     attempts: 3
-  #     file: cf-networking-release-ci/ci/tasks/test-nats-performance/task.yml
-  #     input_mapping:
-  #       cf-networking: cf-networking-dev
-  #       test-config: networking-oss-deployments
-  #       deployments-repo: networking-oss-deployments
-  #     params:
-  #       ENVIRONMENT_NAME: mitre
-  #       BBL_STATE_DIR: environments/mitre/bbl-state
-  #       TEST_CONFIG_DIR: environments/mitre/test-configs
+  - name: mitre-perf-tests
+    serial_groups: [mitre-test-group, mitre-deploy-group]
+    plan:
+    - in_parallel:
+      - get: networking-oss-deployments
+      - get: cf-deployment-concourse-tasks
+      - get: cf-networking-dev
+        passed: [mitre-deploy]
+        trigger: true
+      - get: cf-networking-tarball
+        passed: [mitre-deploy]
+        trigger: true
+      - get: version
+        passed: [mitre-deploy]
+      - get: cf-networking-release-ci
+        params:
+          submodules: none
+      - get: cf-deployment
+        passed: [mitre-deploy]
+        trigger: true
+      - get: silk-dev
+        passed: [mitre-deploy]
+        trigger: true
+      - get: silk-tarball
+        passed: [mitre-deploy]
+      - get: mitre
+        resource: toolsmiths-pool
+        passed: [mitre-deploy]
+    - task: generate-perf-config
+      config:
+        platform: linux
+        image_resource:
+          type: registry-image
+          source:
+            repository: relintdockerhubpushbot/cf-deployment-concourse-tasks
+        outputs:
+          - name: test-config
+        run:
+          path: /bin/bash
+          args:
+            - -c
+            - |
+              # set +x
+
+              mkdir -p test-config
+              echo '{}' | jq \
+              --args \
+              '{
+                    "nats_url": "10.0.255.190",
+                    "nats_username": "nats",
+                    "nats_password": "any_password",
+                    "nats_monitoring_port": 8222,
+                    "num_messages": 100000,
+                    "num_publishers": 10
+              }' > test-config/perf-config.json
+              cat test-config/perf-config.json
+
+    - task: mitre-perf-tests
+      privileged: true
+      attempts: 3
+      file: cf-networking-release-ci/ci/tasks/test-nats-performance/task.yml
+      input_mapping:
+        cf-networking: cf-networking-dev
+        test-config: networking-oss-deployments
+        deployments-repo: networking-oss-deployments
+      params:
+        ENVIRONMENT_NAME: mitre
+        BBL_STATE_DIR: environments/mitre/bbl-state
+        TEST_CONFIG_DIR: environments/mitre/test-configs
 
   # - name: mitre-cats
   #   serial_groups: [mitre-test-group, mitre-deploy-group]

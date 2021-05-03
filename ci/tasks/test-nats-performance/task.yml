@@ -9,12 +9,11 @@ image_resource:
 inputs:
   - name: cf-networking
   - name: cf-networking-release-ci
-  - name: deployments-repo
+  - name: test-config
+  - name: toolsmiths-env
 
 params:
-  ENVIRONMENT_NAME: ~
-  BBL_STATE_DIR: ~
-  TEST_CONFIG_DIR: ~
+  CONFIG: ~
 
 run:
   path: cf-networking-release-ci/ci/tasks/test-nats-performance/task
