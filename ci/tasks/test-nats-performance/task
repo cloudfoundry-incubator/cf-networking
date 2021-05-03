@@ -8,7 +8,9 @@ function cleanup() {
 
 trap 'cleanup' EXIT
 
-source cf-deployment-concourse-tasks/shared-functions
+ROOT="$(cd "$(dirname $0)/../../../.." && pwd)"
+
+source "${ROOT}/cf-deployment-concourse-tasks/shared-functions"
 setup_bosh_env_vars
 
 export GOPATH=$PWD/cf-networking
