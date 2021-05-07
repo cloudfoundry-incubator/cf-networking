@@ -1282,71 +1282,38 @@ jobs:
   #         AWS_ENV: toque.c2c.cf-app.com
   #         DATADOG_API_KEY: ((datadog_api_key))
 
-  # - name: caubeen-bbl-up
-  #   serial_groups: [caubeen]
-  #   plan:
-  #   - in_parallel:
-  #     - get: cf-deployment-concourse-tasks
-  #     - get: networking-oss-deployments
-  #     - get: cf-networking-release-ci
-  #     - get: bosh-bootloader
-  #   - task: add-parent-dns
-  #     file: cf-networking-release-ci/ci/tasks/add-parent-dns/task.yml
-  #     params:
-  #       ENVIRONMENT: caubeen
-  #     input_mapping:
-  #       bbl-state: networking-oss-deployments
-  #   - task: bbl-up
-  #     file: cf-deployment-concourse-tasks/bbl-up/task.yml
-  #     params:
-  #       BBL_GCP_SERVICE_ACCOUNT_KEY: deployment-helpers/c2c-service-account-key.json
-  #       BBL_GCP_REGION: us-east1
-  #       BBL_STATE_DIR: environments/caubeen/bbl-state
-  #       BBL_IAAS: gcp
-  #       BBL_LB_CERT: ((caubeen-lb-cert.certificate))
-  #       BBL_LB_KEY: ((caubeen-lb-key.private_key))
-  #       LB_DOMAIN: caubeen.c2c.cf-app.com
-  #       BBL_ENV_NAME: caubeen
-  #     input_mapping:
-  #       bbl-state: updated-bbl-state
-  #       bbl-config: updated-bbl-state
-  #     ensure:
-  #       put: networking-oss-deployments
-  #       params:
-  #         repository: updated-bbl-state
-  #         rebase: true
-
-  # - name: caubeen-bbl-destroy
-  #   serial_groups: [caubeen]
-  #   plan:
-  #   - in_parallel:
-  #     - get: cf-deployment-concourse-tasks
-  #     - get: networking-oss-deployments
-  #   - task: bosh-cleanup
-  #     file: cf-deployment-concourse-tasks/bosh-cleanup/task.yml
-  #     params:
-  #       BBL_STATE_DIR: environments/caubeen/bbl-state
-  #     input_mapping:
-  #       bbl-state: networking-oss-deployments
-  #   - task: bbl-destroy
-  #     file: cf-deployment-concourse-tasks/bbl-destroy/task.yml
-  #     params:
-  #       BBL_GCP_SERVICE_ACCOUNT_KEY: deployment-helpers/c2c-service-account-key.json
-  #       BBL_STATE_DIR: environments/caubeen/bbl-state
-  #     input_mapping:
-  #       bbl-state: networking-oss-deployments
-  #     ensure:
-  #       put: networking-oss-deployments
-  #       params:
-  #         repository: updated-bbl-state
-  #         rebase: true
+  - name: caubeen-claim-and-clean-environment
+    serial_groups: [caubeen]
+    plan:
+    - in_parallel:
+      - get: cf-networking-release-ci
+        params:
+          submodules: none
+      - get: cf-deployment-concourse-tasks
+      - get: cf-networking-dev
+        # passed: [unit-and-integration-tests]
+        trigger: true
+      - get: silk-dev
+        # passed: [unit-and-integration-tests]
+        trigger: true
+    - put: caubeen
+      resource: toolsmiths-pool
+      inputs: []
+      params:
+        action: claim
+    - task: guarantee-no-existing-cf-deployment
+      file: cf-deployment-concourse-tasks/bosh-delete-deployment/task.yml
+      params:
+        BBL_STATE_DIR: environments/caubeen/bbl-state
+        DEPLOYMENT_NAME: cf
+        IGNORE_ERRORS: true
+      input_mapping:
+        toolsmiths-env: caubeen
 
   # - name: caubeen-upgrade-test
   #   serial_groups: [caubeen]
   #   plan:
   #   - in_parallel:
-  #     - get: trigger-upgrade-deploy
-  #       trigger: true
   #     - get: cf-networking-release-ci
   #       params:
   #         submodules: none
@@ -1356,23 +1323,16 @@ jobs:
   #     - get: cf-networking-2.23.0
   #     - get: silk-2.23.0
   #     - get: cf-networking-dev
-  #       passed: [unit-and-integration-tests]
+  #       passed: [caubeen-claim-and-clean-environment]
   #     - get: silk-dev
-  #       passed: [unit-and-integration-tests]
-  #   - task: guarantee-no-existing-cf-deployment
-  #     file: cf-deployment-concourse-tasks/bosh-delete-deployment/task.yml
-  #     params:
-  #       BBL_STATE_DIR: environments/caubeen/bbl-state
-  #       DEPLOYMENT_NAME: cf
-  #       IGNORE_ERRORS: true
-  #     input_mapping:
-  #       bbl-state: networking-oss-deployments
+  #       passed: [caubeen-claim-and-clean-environment]
+  #     - get: caubeen
+  #       resource: toolsmiths-pool
+  #       passed: [caubeen-claim-and-clean-environment]
   #   - task: upload-stemcell
   #     file: cf-deployment-concourse-tasks/bosh-upload-stemcell-from-cf-deployment/task.yml
-  #     params:
-  #       BBL_STATE_DIR: environments/caubeen/bbl-state
   #     input_mapping:
-  #       bbl-state: networking-oss-deployments
+  #       toolsmiths-env: caubeen
   #   - task: collect-pinned-ops-files
   #     file: cf-networking-release-ci/ci/tasks/collect-named-ops-files/task.yml
   #     params:
